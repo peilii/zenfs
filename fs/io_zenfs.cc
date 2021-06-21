@@ -633,8 +633,8 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
 }
 
 void ZenFSGCWorker::ZenFSGCWorker() {
+  
   total_residue_ = 0;
-
 
 }
 
@@ -679,9 +679,8 @@ void zone_reset_to_reclaim(vector<Zone*>& merge_zone_list) {
     IOStatus s;
     s = zone_idx->Reset();
     if(!s) {
-
+      Debug(logger_, "Failed resetting zone when executing GC!");
     }
-
   }
 }
 
