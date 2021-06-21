@@ -229,19 +229,19 @@ class ZonedRandomAccessFile : public FSRandomAccessFile {
 
 class ZenfsGCWorker {  
 
-  ZenFS* fs;
+  ZenFS* fs; //friend class, used to check the zonefile name
   ZonedBlockDevice* zbd_;
-  std::map<Zone*, vector<ZoneExtent*>> zone2extend_map;//To store the Extent list of marked zone, used to move the Extent data
   
   
   std::map<Zone*, uint64_t> zone_residue;//record each zone's residual data size
   std::vector<ZoneFile*> files_moved_to_dst_zone;
+  uint64_t total_residue_;
 
   std::vector<Zone*> merge_zone_list;
 
-
+  std::vector<ZoneExtent*> extent_list;//To store the Extent list of marked zone, used to move the Extent data
   std::vector<Zone*> dst_zone_list; // It is possible for residual data to be larger than Zone Capacity
-  uint64_t total_residue_;
+  
 
 
   public:
@@ -251,9 +251,9 @@ class ZenfsGCWorker {
 
   vector<Zone*>  mark_zones_to_merge_data();
   vector<Zone*> get_dest_zone_to_move_valid_data(uint64_t ttl_residue);
-  void move_valid_data_to_new_dst_zone(vector<Zone*>& dst_zone);
-  void zone_reset_to_reclaim(vector<Zone*>& merge_zone_list);
-  void update_metadata_after_merge(vector<ZoneFile*>& files_moved_to_dst_zone);
+  void move_valid_data_to_new_dst_zone();//extent_list  and dst_zone_list
+  void zone_reset_to_reclaim(); //merge_zone_list
+  void update_metadata_after_merge() //files_moved_to_dst_zone
 
 };
 
