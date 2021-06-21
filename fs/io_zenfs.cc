@@ -636,6 +636,59 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
   return zoneFile_->GetUniqueId(id, max_size);
 }
 
+void ZenFSGCWorker::ZenFSGCWorker() {
+  total_residue_ = 0;
+
+
+}
+
+void ZenFSGCWorker::check_zone_valid_residual_data() {
+
+  std::map<std::string, ZoneFile*>::iterator it;
+
+  for(it = fs->files_.begin(); it != fs->files_.end(); it++) {
+
+    ZoneFile* existFile;
+    existFile = it->second;
+
+    for(auto ext_it : existFile->extents_) {
+
+      ZoneExtent* extent;
+      extent = *ext_it;
+      
+      Zone* zone_idx = extent->zone_;
+      //only care about the FULL zone.
+      if(!zone_idx->IsFull()) {
+        xxxxxxxxxxx
+      }
+
+      zone_residue[zone_idx] += extent->length_;
+      total_residue_ += extent->length_;
+
+    }
+
+    files_moved_to_dst_zone.push_back(existFile);
+  }
+
+
+}
+
+void zone_reset_to_reclaim(vector<Zone*>& merge_zone_list) {
+
+  for(auto zone_it : merge_zone_list) {
+
+    Zone* zone_idx;
+    zone_idx = *zone_it;
+
+    IOStatus s;
+    s = zone_idx->Reset();
+    if(!s) {
+
+    }
+
+  }
+}
+
 }  // namespace ROCKSDB_NAMESPACE
 
 #endif  // !defined(ROCKSDB_LITE) && !defined(OS_WIN)
