@@ -225,8 +225,6 @@ class ZonedRandomAccessFile : public FSRandomAccessFile {
   size_t GetUniqueId(char* id, size_t max_size) const override;
 };
 
-}  // namespace ROCKSDB_NAMESPACE
-
 class ZenfsGCWorker {  
 
   ZenFS* fs; //friend class, used to check the zonefile name
@@ -256,5 +254,7 @@ class ZenfsGCWorker {
   void update_metadata_after_merge() //files_moved_to_dst_zone
 
 };
+
+}  // namespace ROCKSDB_NAMESPACE
 
 #endif  // !defined(ROCKSDB_LITE) && defined(OS_LINUX)

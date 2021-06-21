@@ -659,12 +659,12 @@ void ZenFSGCWorker::check_zone_valid_residual_data() {
       Zone* zone_idx = extent->zone_;
       //only care about the FULL zone.
       if(!zone_idx->IsFull()) {
-        xxxxxxxxxxx
+        break;
       }
 
       zone_residue[zone_idx] += extent->length_;
       total_residue_ += extent->length_;
-
+      extent_list.push_back(extent);
     }
 
     files_moved_to_dst_zone.push_back(existFile);
@@ -673,7 +673,7 @@ void ZenFSGCWorker::check_zone_valid_residual_data() {
 
 }
 
-void zone_reset_to_reclaim(vector<Zone*>& merge_zone_list) {
+void zone_reset_to_reclaim() {
 
   for(auto zone_it : merge_zone_list) {
 
