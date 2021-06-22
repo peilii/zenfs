@@ -638,10 +638,10 @@ void ZenFSGCWorker::ZenFSGCWorker() {
 
 }
 
-void ZenFSGCWorker::check_zone_valid_residual_data() {
+void ZenFSGCWorker::CheckZoneValidResidualData() {
 
   std::map<std::string, ZoneFile*>::iterator it;
-
+  fs->files_mtx_.lock();
   for(it = fs->files_.begin(); it != fs->files_.end(); it++) {
 
     ZoneFile* existFile;
@@ -665,11 +665,11 @@ void ZenFSGCWorker::check_zone_valid_residual_data() {
 
     files_moved_to_dst_zone.push_back(existFile);
   }
-
+  fs->files_mtx_.unlock();
 
 }
 
-void zone_reset_to_reclaim() {
+void ZoneResetToReclaim() {
 
   for(auto zone_it : merge_zone_list) {
 

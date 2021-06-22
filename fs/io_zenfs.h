@@ -226,15 +226,18 @@ class ZonedRandomAccessFile : public FSRandomAccessFile {
   size_t GetUniqueId(char* id, size_t max_size) const override;
 };
 
-class ZenfsGCWorker {  
-
+class ZenFSGCWorker {  
+  
+  //if below variable 'fs' cannot reference to ZenFS, then we have to populate it in the initiator!!!
   ZenFS* fs; //friend class, used to check the zonefile name
+
   ZonedBlockDevice* zbd_;
   
   
   std::map<Zone*, uint64_t> zone_residue;//record each zone's residual data size
   std::vector<ZoneFile*> files_moved_to_dst_zone;
-  uint64_t total_residue_;
+
+  std::atomic<uint64_t> total_residue_; //Is atomic necessary since only one thread at one time?
 
   std::vector<Zone*> merge_zone_list;
 
@@ -246,13 +249,13 @@ class ZenfsGCWorker {
   public:
   explicit void ZenFSGCWorker();// need to init
 
-  void check_zone_valid_residual_data(); //work for below functions
+  void CheckZoneValidResidualData(); //work for below functions
 
-  vector<Zone*>  mark_zones_to_merge_data();
-  vector<Zone*> get_dest_zone_to_move_valid_data(uint64_t ttl_residue);
-  void move_valid_data_to_new_dst_zone();//extent_list  and dst_zone_list
-  void zone_reset_to_reclaim(); //merge_zone_list
-  void update_metadata_after_merge() //files_moved_to_dst_zone
+  vector<Zone*>  MarkZonesToMergeData();
+  vector<Zone*> GetDestZoneToMoveValidData(uint64_t ttl_residue);
+  void MoveValidDataToNewDestZone();//extent_list  and dst_zone_list
+  void ZoneResetToReclaim(); //merge_zone_list
+  void UpdateMetadataAfterMerge(); //files_moved_to_dst_zone
 
 };
 
