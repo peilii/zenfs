@@ -26,6 +26,7 @@
 #include "rocksdb/env.h"
 #include "util/coding.h"
 #include "zbd_zenfs.h"
+#include "fs_zenfs.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -636,7 +637,7 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
   return zoneFile_->GetUniqueId(id, max_size);
 }
 
-void ZenFSGCWorker::ZenFSGCWorker() {
+ZenFSGCWorker::ZenFSGCWorker() {
   
   total_residue_ = 0;
 
@@ -654,7 +655,7 @@ void ZenFSGCWorker::CheckZoneValidResidualData() {
     for(auto ext_it : existFile->extents_) {
 
       ZoneExtent* extent;
-      extent = *ext_it;
+      extent = ext_it;
       
       Zone* zone_idx = extent->zone_;
       //only care about the FULL zone.
@@ -673,17 +674,17 @@ void ZenFSGCWorker::CheckZoneValidResidualData() {
 
 }
 
-void ZoneResetToReclaim() {
-
-  for(auto zone_it : merge_zone_list) {
+void ZenFSGCWorker::ZoneResetToReclaim() {
+  std::vector<Zone*>::iterator zone_it;
+  for(zone_it = merge_zone_list.begin(); zone_it != merge_zone_list.end(); zone_it++) {
 
     Zone* zone_idx;
     zone_idx = *zone_it;
 
     IOStatus s;
     s = zone_idx->Reset();
-    if(!s) {
-      Debug(logger_, "Failed resetting zone when executing GC!");
+    if(!s.ok()) {
+      //Debug(logger_, "Failed resetting zone when executing GC!");
     }
   }
 }

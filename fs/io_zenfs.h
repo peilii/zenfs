@@ -25,6 +25,8 @@
 
 namespace ROCKSDB_NAMESPACE {
 
+class ZenFS;
+
 class ZoneExtent {
  public:
   uint64_t start_;
@@ -37,6 +39,7 @@ class ZoneExtent {
 };
 
 class ZoneFile {
+  friend class ZenFSGCWorker; 
  protected:
   ZonedBlockDevice* zbd_;
   std::vector<ZoneExtent*> extents_;
@@ -239,19 +242,18 @@ class ZenFSGCWorker {
   std::atomic<uint64_t> total_residue_; //Is atomic necessary since only one thread at one time?
 
   std::vector<Zone*> merge_zone_list;
-
   std::vector<ZoneExtent*> extent_list;//To store the Extent list of marked zone, used to move the Extent data
   std::vector<Zone*> dst_zone_list; // It is possible for residual data to be larger than Zone Capacity
   
 
 
   public:
-  explicit void ZenFSGCWorker();// need to init
+  explicit ZenFSGCWorker();// need to init
 
   void CheckZoneValidResidualData(); //work for below functions
 
-  vector<Zone*>  MarkZonesToMergeData();
-  vector<Zone*> GetDestZoneToMoveValidData(uint64_t ttl_residue);
+  std::vector<Zone*>  MarkZonesToMergeData();
+  std::vector<Zone*> GetDestZoneToMoveValidData(uint64_t ttl_residue);
   void MoveValidDataToNewDestZone();//extent_list  and dst_zone_list
   void ZoneResetToReclaim(); //merge_zone_list
   void UpdateMetadataAfterMerge(); //files_moved_to_dst_zone
