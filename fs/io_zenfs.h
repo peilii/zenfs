@@ -259,6 +259,7 @@ class ZonedRandomAccessFile : public FSRandomAccessFile {
   void UpdateMetadataAfterMerge(); //files_moved_to_dst_zone
 
 };
+ 
 }  // namespace ROCKSDB_NAMESPACE
 
 #endif  // !defined(ROCKSDB_LITE) && defined(OS_LINUX)
