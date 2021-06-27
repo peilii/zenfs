@@ -39,6 +39,7 @@ class ZoneExtent {
 };
 
 class ZoneFile {
+ 
   friend class ZenFSGCWorker;
  protected:
   ZonedBlockDevice* zbd_;
