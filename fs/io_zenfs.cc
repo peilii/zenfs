@@ -656,6 +656,7 @@ void ZenFSGCWorker::UpdateMetadataAfterMerge() {
             // Should we erase this because this is
             // already deleted ?
             files_moved_to_dst_zone.erase(zone_file_it);
+            fs->files_mtx_.unlock();
             continue;
     }
     fs->files_mtx_.unlock();
