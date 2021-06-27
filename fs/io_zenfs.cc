@@ -636,6 +636,46 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
   return zoneFile_->GetUniqueId(id, max_size);
 }
 
+void ZenFSGCWorker::MoveValidDataToNewDestZone() {
+}
+
+void ZenFSGCWorker::UpdateMetadataAfterMerge() {
+
+  std::vector<ZoneFile*>::iterator zone_file_it;
+  for(zone_file_it = files_moved_to_dst_zone.begin(); zone_file_it != files_moved_to_dst_zone.end(); zone_file_it++) {
+
+    ZoneFile* file_moved;
+    file_moved = *zone_file_it;
+
+    // What if the file is deleted before coming here?
+    // We don't have to update the metadata if the file
+    // is deleted, because once deleted the metadata is
+    // already synced in the DeleteFile() function.
+    fs->files_mtx_.lock();
+    if (fs->files_.find(file_moved->filename_) == fs->files_.end()) {
+            // Should we erase this because this is
+            // already deleted ?
+            files_moved_to_dst_zone.erase(zone_file_it);
+            files_moved_to_dst_zone.erase(zone_file_it);
+            continue;
+    }
+    fs->files_mtx_.unlock();
+
+    for(auto ext_moved : file_moved->extents_) {
+
+      ZoneExtent* extent;
+      extent = ext_moved;
+      // ext_to_zone_map is populated in a different function.
+      extent->zone_ = ext_to_zone_map[extent];
+    }
+
+    // TODO: Need to give a thought about Changlong's comment
+    // on how to trash/deal with old metadata after new changes.
+    fs->SyncFileMetadata(file_moved);
+  }
+
+}
+
 }  // namespace ROCKSDB_NAMESPACE
 
 #endif  // !defined(ROCKSDB_LITE) && !defined(OS_WIN)
