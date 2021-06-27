@@ -641,7 +641,6 @@ void ZenFSGCWorker::MoveValidDataToNewDestZone() {
 }
 
 void ZenFSGCWorker::UpdateMetadataAfterMerge() {
-
   std::vector<ZoneFile*>::iterator zone_file_it;
   for(zone_file_it = files_moved_to_dst_zone.begin(); zone_file_it != files_moved_to_dst_zone.end(); zone_file_it++) {
 
