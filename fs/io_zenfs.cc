@@ -26,6 +26,7 @@
 #include "rocksdb/env.h"
 #include "util/coding.h"
 #include "zbd_zenfs.h"
+#include "fs_zenfs.h"
 
 namespace ROCKSDB_NAMESPACE {
 
