@@ -677,7 +677,7 @@ void ZenFSGCWorker::MoveValidDataToNewDestZone() {
   return IOStatus::OK();
 }
 
-void ZenFSGCWorker::UpdateMetadataAfterMerge() {
+IOStatus ZenFSGCWorker::UpdateMetadataAfterMerge() {
   std::vector<ZoneFile*>::iterator zone_file_it;
   for(zone_file_it = files_moved_to_dst_zone.begin(); zone_file_it != files_moved_to_dst_zone.end(); zone_file_it++) {
 
@@ -697,20 +697,15 @@ void ZenFSGCWorker::UpdateMetadataAfterMerge() {
             continue;
     }
     fs->files_mtx_.unlock();
-
-    for(auto ext_moved : file_moved->extents_) {
-
-      ZoneExtent* extent;
-      extent = ext_moved;
-      // ext_to_zone_map is populated in a different function.
-      extent->zone_ = ext_to_zone_map[extent];
-    }
-
+ 
     // TODO: Need to give a thought about Changlong's comment
     // on how to trash/deal with old metadata after new changes.
     fs->SyncFileMetadata(file_moved);
+    if(!s.ok())
+      return s;
   }
-
+  
+  return s;
 }
 
 }  // namespace ROCKSDB_NAMESPACE
