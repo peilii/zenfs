@@ -679,6 +679,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
 
 IOStatus ZenFSGCWorker::UpdateMetadataAfterMerge() {
   std::vector<ZoneFile*>::iterator zone_file_it;
+  IOStatus s;
   for(zone_file_it = files_moved_to_dst_zone.begin(); zone_file_it != files_moved_to_dst_zone.end(); zone_file_it++) {
 
     ZoneFile* file_moved;
