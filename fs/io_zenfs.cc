@@ -638,6 +638,43 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
 }
 
 void ZenFSGCWorker::MoveValidDataToNewDestZone() {
+  std::vector<Zone*>::iterator zone_it;
+  std::vector<ZoneExtent*>::iterator ext_it;
+  IOStatus s;
+  char* ptr;
+  uint32_t size;
+  uint64_t new_start;
+
+  zone_it = dst_zone_list.begin();
+  for(ext_it = extent_list.begin(); ext_it != extent_list.end(); ) {
+    ZoneExtent* ext;
+    Zone* zone_dst;
+
+    ext = *ext_it;
+    zone_dst = *zone_it;
+
+    ptr = (char*)ext->start_;
+    size = ext->length_;
+
+    new_start = zone_dst->wp_;
+    s = zone_dst->Append(ptr, size);
+    if (s.ok()) {
+      ext->start_ = new_start;
+      ext->zone_ = zone_dst;
+      ext_it++;
+      continue;
+    }
+
+    if (s == IOStatus::NoSpace()) {
+        zone_it++;
+    }
+
+    if (s == IOStatus::IOError()) {
+      return s;
+    }
+  }
+
+  return IOStatus::OK();
 }
 
 void ZenFSGCWorker::UpdateMetadataAfterMerge() {
