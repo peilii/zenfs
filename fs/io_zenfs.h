@@ -245,8 +245,7 @@ class ZonedRandomAccessFile : public FSRandomAccessFile {
   std::vector<Zone*> merge_zone_list;
   std::vector<ZoneExtent*> extent_list;//To store the Extent list of marked zone, used to move the Extent data
   std::vector<Zone*> dst_zone_list; // It is possible for residual data to be larger than Zone Capacity
-  std::map<ZoneExtent*, Zone*> ext_to_zone_map; // Extent was moved to which zone?
-
+  
   
   public:
   explicit ZenFSGCWorker();// need to init
