@@ -636,7 +636,8 @@ size_t ZoneFile::GetUniqueId(char* id, size_t max_size) {
 size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
   return zoneFile_->GetUniqueId(id, max_size);
 }
-
+  
+// TODO: This is incomplete. We perhaps need position read first and then Append
 IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   std::vector<Zone*>::iterator zone_it;
   std::vector<ZoneExtent*>::iterator ext_it;
