@@ -716,7 +716,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     }
 
     new_start = zone_dst->wp_;
-    s = zone_dst->Append(ptr, size);
+    s = zone_dst->Append((char*)ptr, size);
     if (s.ok()) {
       ext->start_ = new_start;
       ext->zone_ = zone_dst;
