@@ -712,7 +712,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
       for(unsigned int j = 0; j < extent_list.size(); j++) {
         delete[] ptr[j];
       }
-      //delete[] ptr; // This throws warning/Error with the C++ compiler. I have no idea.
+      //delete[] ptr; // This throws warning/Error with the C++ compiler.
 
       return s;
     }
