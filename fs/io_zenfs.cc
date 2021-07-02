@@ -636,6 +636,36 @@ size_t ZoneFile::GetUniqueId(char* id, size_t max_size) {
 size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
   return zoneFile_->GetUniqueId(id, max_size);
 }
+
+IOStatus ZenFSGCWorker::ReadExtent(Slice* buf, uint64_t read_pos, Zone* zone_src) {
+  int f = fs->zbd_->GetReadFD();
+  const char* data = buf->data();
+  size_t read = 0;
+  size_t to_read = buf->size();
+  int ret;
+
+  if (read_pos >= zone_src->wp_) {
+    // EOF
+    buf->clear();
+    return IOStatus::OK();
+  }
+
+  if ((read_pos + to_read) > (zone_src->start_ + zone_src->max_capacity_)) {
+    return IOStatus::IOError("Read across zone");
+  }
+  
+  while (read < to_read) {
+    ret = pread(f, (void*)(data + read), to_read - read, read_pos);
+
+    if (ret == -1 && errno == EINTR) continue;
+    if (ret < 0) return IOStatus::IOError("Read failed");
+
+    read += ret;
+    read_pos += ret;
+  }
+
+  return IOStatus::OK();
+}
   
 // TODO: This is incomplete. We perhaps need position read first and then Append
 IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
