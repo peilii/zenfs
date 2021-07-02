@@ -667,15 +667,30 @@ IOStatus ZenFSGCWorker::ReadExtent(Slice* buf, uint64_t read_pos, Zone* zone_src
   return IOStatus::OK();
 }
   
-// TODO: This is incomplete. We perhaps need position read first and then Append
+// This is a very heavy weight routine. Its going to pound the host CPU
+// and also going to increase traffic activity via PCIe to the SSD. We
+// need to explore if majority of these functionality can be offloaded
+// via commands like "simple copy" or some other better ideas. 
 IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   std::vector<Zone*>::iterator zone_it;
   std::vector<ZoneExtent*>::iterator ext_it;
+  std::vector<ZoneExtent*>::iterator e_it;
   IOStatus s;
-  char* ptr;
+  uint64_t r_pos;
   uint32_t size;
   uint64_t new_start;
+  const char* ptr[extent_list.size()];
+  int i = 0;
+  
+  // We need some buffer for reading the data. Can we move this to a more
+  // global place ?
+  for(e_it = extent_list.begin(); e_it != extent_list.end(); e_it++) {
+    ZoneExtent* ext;
+    ext = *e_it;
+    ptr[i++] = new char[ext->length_];
+  }
 
+  i = 0;
   zone_it = dst_zone_list.begin();
   for(ext_it = extent_list.begin(); ext_it != extent_list.end(); ) {
     ZoneExtent* ext;
@@ -683,9 +698,22 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
 
     ext = *ext_it;
     zone_dst = *zone_it;
-
-    ptr = (char*)ext->start_;
+    
+    // This we have to read and then write to the destination 
+    // Zone.
+    r_pos = ext->start_;
     size = ext->length_;
+    Slice buf(ptr[i], size);
+
+    s = ReadExtent(&buf, r_pos, ext->zone_);
+    if(!s.ok()) {
+      for(unsigned int j = 0; j < extent_list.size(); j++) {
+        delete[] ptr[j];
+      }
+      //delete[] ptr; // This throws warning/Error with the C++ compiler. I have no idea.
+
+      return s;
+    }
 
     new_start = zone_dst->wp_;
     s = zone_dst->Append(ptr, size);
@@ -693,6 +721,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
       ext->start_ = new_start;
       ext->zone_ = zone_dst;
       ext_it++;
+      i++;
       continue;
     }
 
