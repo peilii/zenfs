@@ -682,8 +682,10 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   const char* ptr[extent_list.size()];
   int i = 0;
   
-  // We need some buffer for reading the data. Can we move this to a more
-  // global place ?
+  // TODO: We need some buffer for reading the data. Can we move this to a more
+  // global place ? It may be more efficient to create a single buffer
+  // and reusing it by adjusting it size. Create a single buufer with the largest
+  // extent size and keep reusing it for other smaller extents.
   for(e_it = extent_list.begin(); e_it != extent_list.end(); e_it++) {
     ZoneExtent* ext;
     ext = *e_it;
