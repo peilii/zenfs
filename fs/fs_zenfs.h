@@ -159,6 +159,7 @@ class ZenFS : public FileSystemWrapper {
     return path;
   }
 
+  ZoneFile* GetFileInternal(std::string fname);
   ZoneFile* GetFile(std::string fname);
   IOStatus DeleteFile(std::string fname);
 
