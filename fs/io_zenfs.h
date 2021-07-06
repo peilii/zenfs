@@ -257,7 +257,7 @@ class ZonedRandomAccessFile : public FSRandomAccessFile {
   IOStatus MoveValidDataToNewDestZone();//extent_list  and dst_zone_list
   void ZoneResetToReclaim(); //merge_zone_list
   IOStatus UpdateMetadataAfterMerge(); //files_moved_to_dst_zone
-  IOStatus ReadExtent(Slice* buf, uint64_t read_pos, Zone* zone_src);
+  IOStatus ReadExtent(Slice* buf, uint64_t read_pos, Zone* zone_src); //Helper function
 
 };
  
