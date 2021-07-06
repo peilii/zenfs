@@ -713,7 +713,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     // read the data.
     r_pos = ext->start_;
     size = ext->length_;
-    Slice buf(ptr[i], size);
+    Slice buf(ptr, size);
 
     if (dont_read)
       s = ReadExtent(&buf, r_pos, ext->zone_);
