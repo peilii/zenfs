@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
+#include "fs_zenfs.h"
 #include "rocksdb/env.h"
 #include "util/coding.h"
 #include "zbd_zenfs.h"
-#include "fs_zenfs.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -633,29 +633,22 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
   return zoneFile_->GetUniqueId(id, max_size);
 }
 
-ZenFSGCWorker::ZenFSGCWorker() {
-  
-  total_residue_ = 0;
-
-}
+ZenFSGCWorker::ZenFSGCWorker() { total_residue_ = 0; }
 
 void ZenFSGCWorker::CheckZoneValidResidualData() {
-
   std::map<std::string, ZoneFile*>::iterator it;
   fs->files_mtx_.lock();
-  for(it = fs->files_.begin(); it != fs->files_.end(); it++) {
-
+  for (it = fs->files_.begin(); it != fs->files_.end(); it++) {
     ZoneFile* existFile;
     existFile = it->second;
 
-    for(auto ext_it : existFile->extents_) {
-
+    for (auto ext_it : existFile->extents_) {
       ZoneExtent* extent;
       extent = ext_it;
-      
+
       Zone* zone_idx = extent->zone_;
-      //only care about the FULL zone.
-      if(!zone_idx->IsFull()) {
+      // only care about the FULL zone.
+      if (!zone_idx->IsFull()) {
         break;
       }
 
@@ -667,20 +660,19 @@ void ZenFSGCWorker::CheckZoneValidResidualData() {
     files_moved_to_dst_zone.push_back(existFile);
   }
   fs->files_mtx_.unlock();
-
 }
 
 void ZenFSGCWorker::ZoneResetToReclaim() {
   std::vector<Zone*>::iterator zone_it;
-  for(zone_it = merge_zone_list.begin(); zone_it != merge_zone_list.end(); zone_it++) {
-
+  for (zone_it = merge_zone_list.begin(); zone_it != merge_zone_list.end();
+       zone_it++) {
     Zone* zone_idx;
     zone_idx = *zone_it;
 
     IOStatus s;
     s = zone_idx->Reset();
-    if(!s.ok()) {
-      //Debug(logger_, "Failed resetting zone when executing GC!");
+    if (!s.ok()) {
+      // Debug(logger_, "Failed resetting zone when executing GC!");
     }
   }
 }
