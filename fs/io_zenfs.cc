@@ -762,6 +762,8 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     }
   }
 
+  if (ptr) delete[] ptr;
+
   return IOStatus::OK();
 }
 
