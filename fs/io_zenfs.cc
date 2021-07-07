@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
+#include "fs_zenfs.h"
 #include "rocksdb/env.h"
 #include "util/coding.h"
 #include "zbd_zenfs.h"
-#include "fs_zenfs.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -635,7 +635,8 @@ size_t ZonedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
 
 // This is a helper function to read data from a source zone from a read
 // position -> read_pos.
-IOStatus ZenFSGCWorker::ReadExtent(Slice* buf, uint64_t read_pos, Zone* zone_src) {
+IOStatus ZenFSGCWorker::ReadExtent(Slice* buf, uint64_t read_pos,
+                                   Zone* zone_src) {
   int f = zbd_->GetReadFD();
   const char* data = buf->data();
   size_t read = 0;
@@ -651,7 +652,7 @@ IOStatus ZenFSGCWorker::ReadExtent(Slice* buf, uint64_t read_pos, Zone* zone_src
   if ((read_pos + to_read) > (zone_src->start_ + zone_src->max_capacity_)) {
     return IOStatus::IOError("Read across zone");
   }
-  
+
   while (read < to_read) {
     ret = pread(f, (void*)(data + read), to_read - read, read_pos);
 
@@ -681,14 +682,13 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   uint64_t new_start;
   const char* ptr;
   int dont_read = 0;
-  
+
   // Sort the Extent list in decreasing order.
   std::sort(extent_list.begin(), extent_list.end(),
-                  [](ZoneExtent* ext1, ZoneExtent* ext2)
-                  {
-                    return ext1->length_ > ext2->length_;
-                  });
-  
+            [](ZoneExtent* ext1, ZoneExtent* ext2) {
+              return ext1->length_ > ext2->length_;
+            });
+
   // Get the size of the largest extent.
   long_ext_size = extent_list[0]->length_;
 
@@ -698,47 +698,45 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   ptr = new char[long_ext_size];
 
   zone_it = dst_zone_list.begin();
-  for(ext_it = extent_list.begin(); ext_it != extent_list.end(); ) {
+  for (ext_it = extent_list.begin(); ext_it != extent_list.end();) {
     ZoneExtent* ext;
     Zone* zone_dst;
 
     ext = *ext_it;
     zone_dst = *zone_it;
-    
+
     // Set the position and length in the source zone to
     // read the data.
     r_pos = ext->start_;
     size = ext->length_;
     Slice buf(ptr, size);
 
-    if (dont_read)
-      s = ReadExtent(&buf, r_pos, ext->zone_);
-    
+    if (dont_read) s = ReadExtent(&buf, r_pos, ext->zone_);
+
     // Free the allocated memory if error.
-    if(!s.ok()) {
-      if(ptr)
-        delete[] ptr;
-      return s; 
+    if (!s.ok()) {
+      if (ptr) delete[] ptr;
+      return s;
     }
-  
+
     // Store the new starting position for the extent
     // which will be later made persistent.
     new_start = zone_dst->wp_;
-    
+
     // Write the valid data where were read from the
     // source zone to the destination zone.
     s = zone_dst->Append((char*)ptr, size);
     if (s.ok()) {
       // Data was written to the new zone, so the extent
-      // will have a new starting position. No need to 
+      // will have a new starting position. No need to
       // change the length of the extent as it will be the
       // same.
       ext->start_ = new_start;
-      
+
       // The extent was moved to a new zone so change the
       // resident zone parameter of the extent.
       ext->zone_ = zone_dst;
-      
+
       // Current extent was written so now fetch the next extent.
       ext_it++;
       memset((char*)ptr, 0, long_ext_size);
@@ -758,8 +756,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     // we return the status.
     if (s == IOStatus::IOError()) {
       // If memory was allocated, we free it before returning.
-      if(ptr)
-        delete[] ptr;
+      if (ptr) delete[] ptr;
 
       return s;
     }
@@ -771,8 +768,8 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
 IOStatus ZenFSGCWorker::UpdateMetadataAfterMerge() {
   std::vector<ZoneFile*>::iterator zone_file_it;
   IOStatus s;
-  for(zone_file_it = files_moved_to_dst_zone.begin(); zone_file_it != files_moved_to_dst_zone.end(); zone_file_it++) {
-
+  for (zone_file_it = files_moved_to_dst_zone.begin();
+       zone_file_it != files_moved_to_dst_zone.end(); zone_file_it++) {
     ZoneFile* file_moved;
     file_moved = *zone_file_it;
 
@@ -782,21 +779,20 @@ IOStatus ZenFSGCWorker::UpdateMetadataAfterMerge() {
     // already synced in the DeleteFile() function.
     fs->files_mtx_.lock();
     if (fs->files_.find(file_moved->filename_) == fs->files_.end()) {
-            // Should we erase this because this is
-            // already deleted ?
-            files_moved_to_dst_zone.erase(zone_file_it);
-            fs->files_mtx_.unlock();
-            continue;
+      // Should we erase this because this is
+      // already deleted ?
+      files_moved_to_dst_zone.erase(zone_file_it);
+      fs->files_mtx_.unlock();
+      continue;
     }
     fs->files_mtx_.unlock();
- 
+
     // TODO: Need to give a thought about Changlong's comment
     // on how to trash/deal with old metadata after new changes.
     fs->SyncFileMetadata(file_moved);
-    if(!s.ok())
-      return s;
+    if (!s.ok()) return s;
   }
-  
+
   return s;
 }
 
