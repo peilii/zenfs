@@ -711,7 +711,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     size = ext->length_;
     Slice buf(ptr, size);
 
-    if (dont_read) s = ReadExtent(&buf, r_pos, ext->zone_);
+    if (!dont_read) s = ReadExtent(&buf, r_pos, ext->zone_);
 
     // Free the allocated memory if error.
     if (!s.ok()) {
