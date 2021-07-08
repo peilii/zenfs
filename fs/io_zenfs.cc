@@ -715,7 +715,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
 
     // Free the allocated memory if error.
     if (!s.ok()) {
-      if (ptr) delete[] ptr;
+      delete[] ptr;
       return s;
     }
 
@@ -756,13 +756,13 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     // we return the status.
     if (s == IOStatus::IOError()) {
       // If memory was allocated, we free it before returning.
-      if (ptr) delete[] ptr;
+      delete[] ptr;
 
       return s;
     }
   }
 
-  if (ptr) delete[] ptr;
+  delete[] ptr;
 
   return IOStatus::OK();
 }
