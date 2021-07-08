@@ -740,6 +740,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
       // Current extent was written so now fetch the next extent.
       ext_it++;
       memset((char*)ptr, 0, long_ext_size);
+      dont_read = 0;
       continue;
     }
 
