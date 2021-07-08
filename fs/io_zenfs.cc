@@ -792,11 +792,11 @@ IOStatus ZenFSGCWorker::UpdateMetadataAfterMerge() {
 
     // TODO: Need to give a thought about Changlong's comment
     // on how to trash/deal with old metadata after new changes.
-    fs->SyncFileMetadata(file_moved);
+    s = fs->SyncFileMetadata(file_moved);
     if (!s.ok()) return s;
   }
 
-  return s;
+  return IOStatus::OK();
 }
 
 }  // namespace ROCKSDB_NAMESPACE
