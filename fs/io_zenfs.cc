@@ -767,6 +767,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     }
   }
 
+  // Free the allocated buffer before returning OK status.
   free(align_buf);
 
   return IOStatus::OK();
