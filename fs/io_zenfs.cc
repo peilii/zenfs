@@ -680,8 +680,9 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   uint32_t size;
   uint32_t long_ext_size;
   uint64_t new_start;
-  const char* ptr;
+  void* align_buf;
   int dont_read = 0;
+  int ret = 0;
 
   // Sort the Extent list in decreasing order.
   std::sort(extent_list.begin(), extent_list.end(),
@@ -692,10 +693,13 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   // Get the size of the largest extent.
   long_ext_size = extent_list[0]->length_;
 
-  // Allocate a buffer with size of the largest extent.
-  // We have to issue pread from the source zones so we
-  // need a buffer.
-  ptr = new char[long_ext_size];
+  // Allocate a aligned buffer with size of the largest extent.
+  // We have to issue pread from the source zones so we a
+  // buffer.
+  ret = posix_memalign(&align_buf, sysconf(_SC_PAGESIZE), long_ext_size);
+  if (ret) {
+    return IOStatus::IOError("failed allocating alignment write buffer\n");
+  }
 
   zone_it = dst_zone_list.begin();
   for (ext_it = extent_list.begin(); ext_it != extent_list.end();) {
@@ -709,12 +713,12 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     // read the data.
     r_pos = ext->start_;
     size = ext->length_;
-    Slice buf(ptr, size);
+    Slice buf((const char*)align_buf, size);
 
     if (!dont_read) {
       s = ReadExtent(&buf, r_pos, ext->zone_);
       if (!s.ok()) {
-        delete[] ptr;
+	free(align_buf);
         return s;
       }
     }
@@ -725,7 +729,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
 
     // Write the valid data where were read from the
     // source zone to the destination zone.
-    s = zone_dst->Append((char*)ptr, size);
+    s = zone_dst->Append((char*)align_buf, size);
     if (s.ok()) {
       // Data was written to the new zone, so the extent
       // will have a new starting position. No need to
@@ -739,7 +743,7 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
 
       // Current extent was written so now fetch the next extent.
       ext_it++;
-      memset((char*)ptr, 0, long_ext_size);
+      memset(align_buf, 0, long_ext_size);
       dont_read = 0;
       continue;
     }
@@ -757,13 +761,16 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
     // we return the status.
     if (s == IOStatus::IOError()) {
       // If memory was allocated, we free it before returning.
-      delete[] ptr;
+      free(align_buf);
 
       return s;
     }
   }
 
+#if 0
   delete[] ptr;
+#endif
+  free(align_buf);
 
   return IOStatus::OK();
 }
