@@ -682,7 +682,6 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   uint64_t new_start;
   void* align_buf;
   int dont_read = 0;
-  int ret = 0;
 
   // Sort the Extent list in decreasing order.
   std::sort(extent_list.begin(), extent_list.end(),
@@ -694,12 +693,10 @@ IOStatus ZenFSGCWorker::MoveValidDataToNewDestZone() {
   long_ext_size = extent_list[0]->length_;
 
   // Allocate a aligned buffer with size of the largest extent.
-  // We have to issue pread from the source zones so we a
+  // We have to issue pread from the source zones so we need a
   // buffer.
-  ret = posix_memalign(&align_buf, sysconf(_SC_PAGESIZE), long_ext_size);
-  if (ret) {
-    return IOStatus::IOError("failed allocating alignment write buffer\n");
-  }
+  int ret = posix_memalign(&align_buf, sysconf(_SC_PAGESIZE), long_ext_size);
+  if (ret) return IOStatus::IOError("Failed to allocate aligned memory");
 
   zone_it = dst_zone_list.begin();
   for (ext_it = extent_list.begin(); ext_it != extent_list.end();) {
