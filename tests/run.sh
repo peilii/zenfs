@@ -15,7 +15,7 @@ RESULT_PATH="results/$NAME"
 RESULT_DIR="results/$NAME/$TEST_DIR"
 
 mkdir -p $RESULT_DIR
-rm -rf $RESULT_DIR/*
+rm -rf "$RESULT_DIR/*"
 
 for TEST in $TESTS
 do
