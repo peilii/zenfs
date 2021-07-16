@@ -27,6 +27,7 @@ DEFINE_bool(force, false, "Force file system creation.");
 DEFINE_string(path, "", "File path");
 DEFINE_int32(finish_threshold, 0, "Finish used zones if less than x% left");
 DEFINE_string(restore_path, "", "Path to restore files");
+DEFINE_string(backup_path, "", "Path to backup files");
 DEFINE_int32(max_active_zones, 0, "Max active zone limit");
 DEFINE_int32(max_open_zones, 0, "Max active zone limit");
 
@@ -103,8 +104,6 @@ int zenfs_tool_mkfs() {
     return 1;
   }
 
-  fprintf(stdout, "INFO: For ZBD %s, device scheduler is set to mq-deadline.\n",
-          FLAGS_zbd.c_str());
   fprintf(stdout, "ZenFS file system created. Free space: %lu MB\n",
           zbd->GetFreeSpace() / (1024 * 1024));
 
@@ -185,6 +184,34 @@ int zenfs_tool_df() {
   fprintf(stdout, "Free: %lu MB\nUsed: %lu MB\nReclaimable: %lu MB\nSpace amplification: %lu%%\n",
               free / (1024 * 1024), used / (1024 * 1024), reclaimable / (1024 * 1024),
               (100 * reclaimable) / used);
+
+  return 0;
+}
+
+
+int zenfs_tool_stat() {
+  Status s;
+  ZonedBlockDevice *zbd = zbd_open(true);
+  if (zbd == nullptr) return 1;
+
+  ZenFS *zenFS;
+  s = zenfs_mount(zbd, &zenFS, true);
+  if (!s.ok()) {
+    fprintf(stderr, "Failed to mount filesystem, error: %s\n",
+            s.ToString().c_str());
+    return 1;
+  }
+  auto stat = zenFS->GetStat();
+
+  for (auto &&zone : stat) {
+    std::cout << "Zone total=" << zone.total_capacity
+              << " write_position=" << zone.write_position
+              << " start_position=" << zone.start_position << std::endl;
+    for (auto &&file : zone.files) {
+      std::cout << "  [" << file.file_id << "] " << file.filename << " "
+                << file.size_in_zone << std::endl;
+    }
+  }
 
   return 0;
 }
@@ -349,7 +376,15 @@ int zenfs_tool_backup() {
     return 1;
   }
 
-  io_status = zenfs_tool_copy_dir(zenFS, "", FileSystem::Default().get(), FLAGS_path);
+  if (!FLAGS_backup_path.empty() && FLAGS_backup_path.back() != '/') {
+    std::string dest_filename = FLAGS_path + "/" + 
+                                FLAGS_backup_path.substr(FLAGS_backup_path.find_last_of('/')+1);
+    io_status = zenfs_tool_copy_file(zenFS, FLAGS_backup_path, FileSystem::Default().get(), 
+                                     dest_filename);
+  } else {
+    io_status = zenfs_tool_copy_dir(zenFS, FLAGS_backup_path, FileSystem::Default().get(),
+                                    FLAGS_path);
+  }
   if (!io_status.ok()) {
     fprintf(stderr, "Copy failed, error: %s\n", io_status.ToString().c_str());
     return 1;
@@ -382,7 +417,8 @@ int zenfs_tool_restore() {
     return 1;
   }
   
-  io_status = zenfs_tool_copy_dir(FileSystem::Default().get(), FLAGS_path, zenFS, FLAGS_restore_path);
+  io_status = zenfs_tool_copy_dir(FileSystem::Default().get(), FLAGS_path, zenFS,
+                                  FLAGS_restore_path);
   if (!io_status.ok()) {
     fprintf(stderr, "Copy failed, error: %s\n", io_status.ToString().c_str());
     return 1;
@@ -419,6 +455,8 @@ int main(int argc, char **argv) {
     return ROCKSDB_NAMESPACE::zenfs_tool_backup();
   } else if (subcmd == "restore") {
     return ROCKSDB_NAMESPACE::zenfs_tool_restore();
+  } else if (subcmd == "stat") {
+    return ROCKSDB_NAMESPACE::zenfs_tool_stat();
   } else {
     fprintf(stderr, "Subcommand not recognized: %s\n", subcmd.c_str());
     return 1;

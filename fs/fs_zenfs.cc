@@ -19,8 +19,8 @@
 #include <vector>
 
 #include "rocksdb/utilities/object_registry.h"
-#include "util/crc32c.h"
 #include "util/coding.h"
+#include "util/crc32c.h"
 
 #define DEFAULT_ZENV_LOG_PATH "/tmp/"
 
@@ -82,8 +82,7 @@ Status Superblock::CompatibleWith(ZonedBlockDevice* zbd) {
     return Status::Corruption("ZenFS Superblock",
                               "Error: block size missmatch");
   if (zone_size_ != (zbd->GetZoneSize() / block_size_))
-    return Status::Corruption("ZenFS Superblock",
-                              "Error: zone size missmatch");
+    return Status::Corruption("ZenFS Superblock", "Error: zone size missmatch");
   if (nr_zones_ > zbd->GetNrZones())
     return Status::Corruption("ZenFS Superblock",
                               "Error: nr of zones missmatch");
@@ -480,7 +479,7 @@ IOStatus ZenFS::NewWritableFile(const std::string& fname,
 
   /* Persist the creation of the file */
   s = SyncFileMetadata(zoneFile);
-  if(!s.ok()) {
+  if (!s.ok()) {
     delete zoneFile;
     return s;
   }
@@ -489,7 +488,8 @@ IOStatus ZenFS::NewWritableFile(const std::string& fname,
   files_.insert(std::make_pair(fname.c_str(), zoneFile));
   files_mtx_.unlock();
 
-  result->reset(new ZonedWritableFile(zbd_, !file_opts.use_direct_writes, zoneFile, &metadata_writer_));
+  result->reset(new ZonedWritableFile(zbd_, !file_opts.use_direct_writes,
+                                      zoneFile, &metadata_writer_));
 
   return s;
 }
@@ -568,7 +568,7 @@ IOStatus ZenFS::GetChildren(const std::string& dir, const IOOptions& options,
 IOStatus ZenFS::DeleteFile(const std::string& fname, const IOOptions& options,
                            IODebugContext* dbg) {
   IOStatus s;
-  ZoneFile *zoneFile = GetFile(fname);
+  ZoneFile* zoneFile = GetFile(fname);
 
   Debug(logger_, "Delete file: %s \n", fname.c_str());
 
@@ -589,19 +589,19 @@ IOStatus ZenFS::DeleteFile(const std::string& fname, const IOOptions& options,
 IOStatus ZenFS::GetFileModificationTime(const std::string& f,
                                         const IOOptions& options,
                                         uint64_t* mtime, IODebugContext* dbg) {
-   ZoneFile* zoneFile;
-   IOStatus s;
+  ZoneFile* zoneFile;
+  IOStatus s;
 
-   Debug(logger_, "GetFileModificationTime: %s \n", f.c_str());
-   files_mtx_.lock();
-   if (files_.find(f) != files_.end()) {
-     zoneFile = files_[f];
-     *mtime = (uint64_t)zoneFile->GetFileModificationTime();
-   } else {
-     s = target()->GetFileModificationTime(ToAuxPath(f), options, mtime, dbg);
-   }
-   files_mtx_.unlock();
-   return s;
+  Debug(logger_, "GetFileModificationTime: %s \n", f.c_str());
+  files_mtx_.lock();
+  if (files_.find(f) != files_.end()) {
+    zoneFile = files_[f];
+    *mtime = (uint64_t)zoneFile->GetFileModificationTime();
+  } else {
+    s = target()->GetFileModificationTime(ToAuxPath(f), options, mtime, dbg);
+  }
+  files_mtx_.unlock();
+  return s;
 }
 
 IOStatus ZenFS::GetFileSize(const std::string& f, const IOOptions& options,
@@ -1046,6 +1046,45 @@ std::map<std::string, Env::WriteLifeTimeHint> ZenFS::GetWriteLifeTimeHints() {
 
   return hint_map;
 }
+
+std::vector<ZoneStat> ZenFS::GetStat() {
+  // Store size of each file_id in each zone
+  std::map<uint64_t, std::map<uint64_t, uint64_t>> sizes;
+  // Store file_id to filename map
+  std::map<uint64_t, std::string> filenames;
+
+  files_mtx_.lock();
+
+  for (auto& file_it : files_) {
+    ZoneFile* file = file_it.second;
+    uint64_t file_id = file->GetID();
+    filenames[file_id] = file->GetFilename();
+    for (ZoneExtent* extent : file->GetExtents()) {
+      uint64_t zone_fake_id = extent->zone_->start_;
+      sizes[zone_fake_id][file_id] += extent->length_;
+    }
+  }
+
+  files_mtx_.unlock();
+
+  // Final result vector
+  std::vector<ZoneStat> stat = zbd_->GetStat();
+
+  for (auto& zone : stat) {
+    std::map<uint64_t, uint64_t>& zone_files = sizes[zone.start_position];
+    for (auto& file : zone_files) {
+      uint64_t file_id = file.first;
+      uint64_t file_length = file.second;
+      ZoneFileStat file_stat;
+      file_stat.file_id = file_id;
+      file_stat.size_in_zone = file_length;
+      file_stat.filename = filenames[file_id];
+      zone.files.emplace_back(std::move(file_stat));
+    }
+  }
+
+  return stat;
+};
 
 #ifndef NDEBUG
 static std::string GetLogFilename(std::string bdev) {

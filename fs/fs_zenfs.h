@@ -7,10 +7,11 @@
 #pragma once
 
 #include "io_zenfs.h"
-#include "zbd_zenfs.h"
 #include "rocksdb/env.h"
 #include "rocksdb/file_system.h"
+#include "rocksdb/plugin/zenfs/fs/zbd_stat.h"
 #include "rocksdb/status.h"
+#include "zbd_zenfs.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -235,8 +236,7 @@ class ZenFS : public FileSystemWrapper {
   }
 
   IOStatus GetFileModificationTime(const std::string& fname,
-                                   const IOOptions& options,
-                                   uint64_t* mtime,
+                                   const IOOptions& options, uint64_t* mtime,
                                    IODebugContext* dbg) override;
 
   // The directory structure is stored in the aux file system
@@ -348,7 +348,8 @@ class ZenFS : public FileSystemWrapper {
 
   virtual IOStatus NumFileLinks(const std::string& /*fname*/,
                                 const IOOptions& /*options*/,
-                                uint64_t* /*count*/, IODebugContext* /*dbg*/) override {
+                                uint64_t* /*count*/,
+                                IODebugContext* /*dbg*/) override {
     return IOStatus::NotSupported(
         "Getting number of file links is not supported in ZenFS");
   }
@@ -359,6 +360,8 @@ class ZenFS : public FileSystemWrapper {
                                 IODebugContext* /*dbg*/) override {
     return IOStatus::NotSupported("AreFilesSame is not supported in ZenFS");
   }
+
+  std::vector<ZoneStat> GetStat();
 
   ZonedBlockDevice* GetZonedBlockDevice() { return zbd_; }
 };

@@ -18,9 +18,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include <string>
-#include <sstream>
 #include <fstream>
+#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -93,7 +93,8 @@ IOStatus Zone::Reset() {
   ret = zbd_reset_zones(zbd_->GetWriteFD(), start_, zone_sz);
   if (ret) return IOStatus::IOError("Zone reset failed\n");
 
-  ret = zbd_report_zones(zbd_->GetReadFD(), start_, zone_sz, ZBD_RO_ALL, &z, &report);
+  ret = zbd_report_zones(zbd_->GetReadFD(), start_, zone_sz, ZBD_RO_ALL, &z,
+                         &report);
 
   if (ret || (report != 1)) return IOStatus::IOError("Zone report failed\n");
 
@@ -243,17 +244,27 @@ Zone *ZonedBlockDevice::GetIOZone(uint64_t offset) {
   return nullptr;
 }
 
+std::vector<ZoneStat> ZonedBlockDevice::GetStat() {
+  std::vector<ZoneStat> stat;
+  for (const auto z : io_zones) {
+    ZoneStat zone_stat;
+    zone_stat.total_capacity = z->max_capacity_;
+    zone_stat.write_position = z->wp_;
+    zone_stat.start_position = z->start_;
+    stat.emplace_back(std::move(zone_stat));
+  }
+  return stat;
+}
+
 ZonedBlockDevice::ZonedBlockDevice(std::string bdevname,
                                    std::shared_ptr<Logger> logger)
     : filename_("/dev/" + bdevname), logger_(logger) {
   Info(logger_, "New Zoned Block Device: %s", filename_.c_str());
 };
 
-
 std::string ZonedBlockDevice::ErrorToString(int err) {
   char *err_str = strerror(err);
-  if (err_str != nullptr)
-    return std::string(err_str);
+  if (err_str != nullptr) return std::string(err_str);
   return "";
 }
 
@@ -262,7 +273,7 @@ IOStatus ZonedBlockDevice::CheckScheduler() {
   std::string s = filename_;
   std::fstream f;
 
-  s.erase(0, 5); // Remove "/dev/" from /dev/nvmeXnY
+  s.erase(0, 5);  // Remove "/dev/" from /dev/nvmeXnY
   path << "/sys/block/" << s << "/queue/scheduler";
   f.open(path.str(), std::fstream::in);
   if (!f.is_open()) {
@@ -273,7 +284,8 @@ IOStatus ZonedBlockDevice::CheckScheduler() {
   getline(f, buf);
   if (buf.find("[mq-deadline]") == std::string::npos) {
     f.close();
-    return IOStatus::InvalidArgument("Current ZBD scheduler is not mq-deadline, set it to mq-deadline.");
+    return IOStatus::InvalidArgument(
+        "Current ZBD scheduler is not mq-deadline, set it to mq-deadline.");
   }
 
   f.close();
@@ -283,7 +295,7 @@ IOStatus ZonedBlockDevice::CheckScheduler() {
 IOStatus ZonedBlockDevice::Open(bool readonly) {
   struct zbd_zone *zone_rep;
   unsigned int reported_zones;
-  size_t addr_space_sz;
+  uint64_t addr_space_sz;
   zbd_info info;
   Status s;
   uint64_t i = 0;
@@ -292,12 +304,14 @@ IOStatus ZonedBlockDevice::Open(bool readonly) {
 
   read_f_ = zbd_open(filename_.c_str(), O_RDONLY, &info);
   if (read_f_ < 0) {
-    return IOStatus::InvalidArgument("Failed to open zoned block device: " + ErrorToString(errno));
+    return IOStatus::InvalidArgument("Failed to open zoned block device: " +
+                                     ErrorToString(errno));
   }
 
   read_direct_f_ = zbd_open(filename_.c_str(), O_RDONLY | O_DIRECT, &info);
   if (read_direct_f_ < 0) {
-    return IOStatus::InvalidArgument("Failed to open zoned block device: " + ErrorToString(errno));
+    return IOStatus::InvalidArgument("Failed to open zoned block device: " +
+                                     ErrorToString(errno));
   }
 
   if (readonly) {
@@ -305,7 +319,8 @@ IOStatus ZonedBlockDevice::Open(bool readonly) {
   } else {
     write_f_ = zbd_open(filename_.c_str(), O_WRONLY | O_DIRECT | O_EXCL, &info);
     if (write_f_ < 0) {
-      return IOStatus::InvalidArgument("Failed to open zoned block device: " + ErrorToString(errno));
+      return IOStatus::InvalidArgument("Failed to open zoned block device: " +
+                                       ErrorToString(errno));
     }
   }
 
@@ -319,8 +334,7 @@ IOStatus ZonedBlockDevice::Open(bool readonly) {
   }
 
   IOStatus ios = CheckScheduler();
-  if (ios != IOStatus::OK())
-    return ios;
+  if (ios != IOStatus::OK()) return ios;
 
   block_sz_ = info.pblock_size;
   zone_sz_ = info.zone_size;
@@ -420,10 +434,9 @@ uint64_t ZonedBlockDevice::GetUsedSpace() {
 }
 
 uint64_t ZonedBlockDevice::GetReclaimableSpace() {
-  uint64_t reclaimable= 0;
+  uint64_t reclaimable = 0;
   for (const auto z : io_zones) {
-    if (z->IsFull())
-      reclaimable += (z->max_capacity_ - z->used_capacity_);
+    if (z->IsFull()) reclaimable += (z->max_capacity_ - z->used_capacity_);
   }
   return reclaimable;
 }
