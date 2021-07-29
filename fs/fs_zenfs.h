@@ -193,6 +193,10 @@ class ZenFS : public FileSystemWrapper {
     return "ZenFS - The Zoned-enabled File System";
   }
 
+  static const char* FSName() {
+    return "ZenFS - The Zoned-enabled File System";
+  }
+
   virtual IOStatus NewSequentialFile(const std::string& fname,
                                      const FileOptions& file_opts,
                                      std::unique_ptr<FSSequentialFile>* result,
