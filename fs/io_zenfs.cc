@@ -678,7 +678,7 @@ void ZenFSGCWorker::ZoneResetToReclaim() {
 }
 
 // This is a helper function to read data from a source zone from a read
-// position -> read_pos.
+// position.
 IOStatus ZenFSGCWorker::ReadExtent(Slice* buf, uint64_t read_pos,
                                    Zone* zone_src) {
   int f = zbd_->GetReadFD();
