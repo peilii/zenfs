@@ -378,12 +378,19 @@ IOStatus ZenFS::SyncFileMetadata(ZoneFile* zoneFile) {
   return s;
 }
 
-ZoneFile* ZenFS::GetFile(std::string fname) {
+/* Must hold files_mtx_ */
+ZoneFile* ZenFS::GetFileInternal(std::string fname) {
   ZoneFile* zoneFile = nullptr;
-  files_mtx_.lock();
   if (files_.find(fname) != files_.end()) {
     zoneFile = files_[fname];
   }
+  return zoneFile;
+}
+
+ZoneFile* ZenFS::GetFile(std::string fname) {
+  ZoneFile* zoneFile = nullptr;
+  files_mtx_.lock();
+  zoneFile = GetFileInternal(fname);
   files_mtx_.unlock();
   return zoneFile;
 }
@@ -392,8 +399,8 @@ IOStatus ZenFS::DeleteFile(std::string fname) {
   ZoneFile* zoneFile = nullptr;
   IOStatus s;
 
-  zoneFile = GetFile(fname);
   files_mtx_.lock();
+  zoneFile = GetFileInternal(fname);
   if (zoneFile != nullptr) {
     std::string record;
 
@@ -659,6 +666,20 @@ void ZenFS::EncodeSnapshotTo(std::string* output) {
     PutLengthPrefixedSlice(&files_string, Slice(file_string));
   }
   PutLengthPrefixedSlice(output, Slice(files_string));
+}
+
+void ZenFS::EncodeJson(std::ostream& json_stream) {
+  bool first_element = true;
+  json_stream << "[";
+  for (const auto& file : files_) {
+    if (first_element) {
+      first_element = false;
+    } else {
+      json_stream << ",";
+    }
+    file.second->EncodeJson(json_stream);
+  }
+  json_stream << "]";
 }
 
 Status ZenFS::DecodeFileUpdateFrom(Slice* slice) {

@@ -159,6 +159,7 @@ class ZenFS : public FileSystemWrapper {
     return path;
   }
 
+  ZoneFile* GetFileInternal(std::string fname);
   ZoneFile* GetFile(std::string fname);
   IOStatus DeleteFile(std::string fname);
 
@@ -174,6 +175,8 @@ class ZenFS : public FileSystemWrapper {
   const char* Name() const override {
     return "ZenFS - The Zoned-enabled File System";
   }
+
+  void EncodeJson(std::ostream& json_stream);
 
   virtual IOStatus NewSequentialFile(const std::string& fname,
                                      const FileOptions& file_opts,
