@@ -671,7 +671,7 @@ void ZenFSGCWorker::ZoneResetToReclaim() {
 
     IOStatus s;
     s = zone_idx->Reset();
-    if(!s.ok()) {
+    if (!s.ok()) {
       Debug(logger_, "Failed resetting zone when executing GC!");
     }
   }
