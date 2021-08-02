@@ -670,18 +670,24 @@ void ZenFSGCWorker::CheckZoneValidResidualData() {
     existFile = it->second;
 
     for (auto ext_it : existFile->extents_) {
-      ZoneExtent* extent;
-      extent = ext_it;
-
-      Zone* zone_idx = extent->zone_;
+      double zone_valid_rate;
+      Zone* zone_idx = ext_it->zone_;
       // only care about the FULL zone.
       if (!zone_idx->IsFull()) {
-        break;
+        continue;
       }
 
-      zone_residue[zone_idx] += extent->length_;
-      total_residue_ += extent->length_;
-      extent_list.push_back(extent);
+      total_residue_ += ext_it->length_;
+      zone_valid_rate =
+          (double)zone_idx->used_capacity_ / (double)zone_idx->max_capacity_;
+      if (zone_valid_rate < ZENFS_GC_THREASHOLD) {
+        auto iter =
+            find(merge_zone_list.begin(), merge_zone_list.end(), zone_idx);
+        if (iter == merge_zone_list.end()) {
+          merge_zone_list.push_back(zone_idx);
+        }
+        extent_list.push_back(ext_it);
+      }
     }
 
     files_moved_to_dst_zone.push_back(existFile);
@@ -868,6 +874,27 @@ IOStatus ZenFSGCWorker::UpdateMetadataAfterMerge() {
   }
 
   return IOStatus::OK();
+}
+
+std::vector<Zone*> ZenFSGCWorker::MarkZonesToMergeData() {
+  merge_zone_list = zbd_->GetReclaimZones();
+  return merge_zone_list;
+}
+
+std::vector<Zone*> ZenFSGCWorker::GetDestZoneToMoveValidData(
+    uint64_t ttl_residue) {
+  while (ttl_residue) {
+    Zone* zone_source = *merge_zone_list.begin();
+    Zone* zone = zbd_->AllocateZone(zone_source->lifetime_);
+    if (!zone) {
+      Debug(logger_, "Failed allocating new zones for GC!");
+    } else {
+      dst_zone_list.push_back(zone);
+      ttl_residue -= (zone->max_capacity_ >= ttl_residue) ? ttl_residue
+                                                          : zone->max_capacity_;
+    }
+  }
+  return dst_zone_list;
 }
 
 }  // namespace ROCKSDB_NAMESPACE
