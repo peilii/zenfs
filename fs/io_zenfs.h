@@ -235,6 +235,7 @@ class ZenFSGCWorker {
   // it in the initiator!!!
   ZenFS* fs;  // friend class, used to check the zonefile name
 
+  std::shared_ptr<Logger> logger_;
   ZonedBlockDevice* zbd_;
 
   std::map<Zone*, uint64_t>
