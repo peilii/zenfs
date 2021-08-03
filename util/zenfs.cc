@@ -416,6 +416,7 @@ int zenfs_tool_dump() {
   json_stream << ",\"files\":";
   zenFS->EncodeJson(json_stream);
   json_stream << "}";
+
   return 0;
 }
 
