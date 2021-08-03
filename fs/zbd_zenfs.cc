@@ -174,6 +174,22 @@ Zone *ZonedBlockDevice::GetIOZone(uint64_t offset) {
   return nullptr;
 }
 
+std::vector<Zone *> ZonedBlockDevice::GetReclaimZones(void) {
+  std::vector<Zone *> GCReclaimZones;
+  double zone_valid_rate;
+  for (const auto z : io_zones) {
+    if ((!z->IsUsed()) && (!z->IsFull())) continue;
+    /* once the valid data in a zone is less than 10%, it will be seleted as GC
+     * zone */
+    zone_valid_rate = (double)z->used_capacity_ / (double)z->max_capacity_;
+    if (zone_valid_rate <= ZENFS_GC_THREASHOLD) {
+      GCReclaimZones.push_back(z);
+    };
+  }
+
+  return GCReclaimZones;
+}
+
 ZonedBlockDevice::ZonedBlockDevice(std::string bdevname,
                                    std::shared_ptr<Logger> logger)
     : filename_("/dev/" + bdevname), logger_(logger) {
