@@ -664,6 +664,7 @@ ZenFSGCWorker::ZenFSGCWorker() { total_residue_ = 0; }
 
 void ZenFSGCWorker::CheckZoneValidResidualData() {
   std::map<std::string, ZoneFile*>::iterator it;
+  std::vector<ZoneFile*>::iterator it_file;
   fs->files_mtx_.lock();
   for (it = fs->files_.begin(); it != fs->files_.end(); it++) {
     ZoneFile* existFile;
@@ -687,10 +688,16 @@ void ZenFSGCWorker::CheckZoneValidResidualData() {
           merge_zone_list.push_back(zone_idx);
         }
         extent_list.push_back(ext_it);
+        it_file =
+            find(files_moved_to_dst_zone.begin(), files_moved_to_dst_zone.end(),
+                 existFile);  // Added by Sekhar
+        if (it_file == files_moved_to_dst_zone.end())
+          files_moved_to_dst_zone.push_back(existFile);  // Moved here by Sekhar
       }
     }
-
-    files_moved_to_dst_zone.push_back(existFile);
+#if 0
+    files_moved_to_dst_zone.push_back(existFile); // Commented by Sekhar
+#endif
   }
   fs->files_mtx_.unlock();
 }
